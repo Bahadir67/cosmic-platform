@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-cosmic-dark text-white;
+  }
+}
+
+@layer components {
+  .cosmic-gradient {
+    @apply bg-gradient-to-r from-cosmic-purple to-cosmic-blue;
+  }
+}

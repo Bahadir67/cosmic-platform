@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model StarSystem {
+  id          String   @id @default(cuid())
+  username    String   @unique
+  email       String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // User profile data
+  reputation  Int      @default(0)
+  brightness  Int      @default(0)
+  
+  // Relations
+  planets     Planet[]
+  createdBridges Bridge[] @relation("BridgeCreator")
+  
+  @@map("star_systems")
+}
+
+model Planet {
+  id           String      @id @default(cuid())
+  starSystemId String      @map("star_system_id")
+  planetType   PlanetType
+  config       Json        @default("{}")
+  createdAt    DateTime    @default(now())
+  
+  // Relations
+  starSystem   StarSystem  @relation(fields: [starSystemId], references: [id], onDelete: Cascade)
+  content      Content[]
+  
+  @@map("planets")
+}
+
+model Content {
+  id           String      @id @default(cuid())
+  planetId     String      @map("planet_id")
+  type         ContentType
+  title        String
+  body         String?
+  metadata     Json        @default("{}")
+  
+  // AI analysis
+  entropyScore Float       @default(0.0) @map("entropy_score")
+  
+  // Timestamps
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  
+  // Relations
+  planet       Planet      @relation(fields: [planetId], references: [id], onDelete: Cascade)
+  bridgesFrom  Bridge[]    @relation("SourceContent")
+  bridgesTo    Bridge[]    @relation("TargetContent")
+  
+  @@map("content")
+}
+
+model Bridge {
+  id         String     @id @default(cuid())
+  sourceId   String     @map("source_id")
+  targetId   String     @map("target_id")
+  creatorId  String     @map("creator_id")
+  bridgeType BridgeType @map("bridge_type")
+  reason     String
+  confidence Float      @default(0.0)
+  createdAt  DateTime   @default(now())
+  
+  // Relations
+  source     Content    @relation("SourceContent", fields: [sourceId], references: [id], onDelete: Cascade)
+  target     Content    @relation("TargetContent", fields: [targetId], references: [id], onDelete: Cascade)
+  creator    StarSystem @relation("BridgeCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  @@map("bridges")
+}
+
+// Enums
+enum PlanetType {
+  MERCURY
+  VENUS
+  MARS
+  JUPITER
+  EARTH
+  KRONOS
+}
+
+enum ContentType {
+  LAYER
+  SATELLITE
+}
+
+enum BridgeType {
+  REFERENCE
+  INSPIRATION
+  UPDATE
+  DEBATE
+}

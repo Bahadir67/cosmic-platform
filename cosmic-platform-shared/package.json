@@ -1,0 +1,19 @@
+{
+  "name": "cosmic-platform-shared",
+  "version": "0.1.0",
+  "description": "Cosmic Platform - Shared Repository",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.2.2",
+    "@types/node": "^20.9.0",
+    "jest": "^29.7.0"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts"
+}
