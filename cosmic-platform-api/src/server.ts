@@ -1,10 +1,14 @@
-// src/server.ts - Fixed Pino Logger Configuration
+// src/server.ts - PRODUCTION VERSION
 import Fastify from 'fastify';
 import { PrismaClient } from '@prisma/client';
 import { authRoutes } from './features/auth/auth.routes';
 
+/**
+ * 🌌 Cosmic Platform API Server
+ * Federated social platform with cosmic metaphors
+ */
 
-// Initialize Fastify with correct logger configuration
+// Initialize Fastify with optimized logger configuration
 const fastify = Fastify({
   logger: {
     level: 'info',
@@ -22,27 +26,19 @@ const fastify = Fastify({
 // Initialize Prisma client
 const prisma = new PrismaClient();
 
+/**
+ * Global error handler for the Fastify server
+ * Provides appropriate error responses based on environment and error type
+ */
 fastify.setErrorHandler((error, request, reply) => {
   const isDevelopment = process.env.NODE_ENV === 'development';
   
-  // LOG EVERYTHING in development
-  console.error('🚨 DETAILED ERROR INFORMATION:');
-  console.error('Request URL:', request.url);
-  console.error('Request Method:', request.method);
-  console.error('Error Name:', error.name);
-  console.error('Error Message:', error.message);
-  console.error('Error Code:', error.code);
-  console.error('Error Status:', error.statusCode);
-  console.error('Error Stack:', error.stack);
-  console.error('Request Body:', request.body);
-  console.error('---END ERROR DETAILS---');
-  
+  // Log error details
   fastify.log.error({
     error: error.message,
     stack: isDevelopment ? error.stack : undefined,
     url: request.url,
-    method: request.method,
-    body: request.body
+    method: request.method
   });
 
   // Return detailed error in development
@@ -97,138 +93,15 @@ fastify.setErrorHandler((error, request, reply) => {
   const statusCode = error.statusCode || 500;
   return reply.status(statusCode).send({
     error: statusCode >= 500 ? 'Internal Server Error' : 'Bad Request',
-    message: isDevelopment ? error.message : 'An error occurred',
-    ...(isDevelopment && { stack: error.stack })
+    message: isDevelopment ? error.message : 'An error occurred'
   });
 });
 
-// Test endpoint - add this to server.ts
-
-// Add this debug endpoint to server.ts after other routes
-
-// Debug auth controller imports
-fastify.get('/debug/auth', async (request, reply) => {
-  console.log('🔍 Debug auth endpoint called');
-  
-  try {
-    console.log('Testing imports...');
-    
-    // Test AuthController import
-    const { AuthController } = await import('./features/auth/auth.controller');
-    console.log('✅ AuthController imported');
-    
-    // Test schemas import
-    const { RegisterSchema } = await import('./schemas/auth.schemas');
-    console.log('✅ RegisterSchema imported');
-    
-    // Test utilities
-    const { JWTUtil } = await import('./utils/jwt');
-    const { PasswordUtil } = await import('./utils/password');
-    console.log('✅ Utils imported');
-    
-    // Test services
-    const { EmailService } = await import('./services/email.service');
-    console.log('✅ EmailService imported');
-    
-    // Test creating controller instance
-    const authController = new AuthController();
-    console.log('✅ AuthController instance created');
-    
-    // Test Prisma connection
-    await authController.prisma.$queryRaw`SELECT 1 as test`;
-    console.log('✅ Prisma connection working');
-    
-    return {
-      status: 'All auth components working',
-      timestamp: new Date()
-    };
-    
-  } catch (error) {
-    console.error('❌ Auth debug error:', error.message);
-    console.error('❌ Stack:', error.stack);
-    
-    return reply.status(500).send({
-      error: 'Auth debug failed',
-      message: error.message,
-      stack: error.stack
-    });
-  }
-});
-
-// Minimal registration test
-fastify.post('/debug/register', async (request, reply) => {
-  console.log('🔍 Debug registration called');
-  console.log('Request body:', request.body);
-  
-  try {
-    // Import and test validation
-    const { RegisterSchema } = await import('./schemas/auth.schemas');
-    console.log('🔍 Testing validation...');
-    
-    const validatedData = RegisterSchema.parse(request.body);
-    console.log('✅ Validation passed:', validatedData);
-    
-    return {
-      message: 'Validation successful',
-      data: validatedData
-    };
-    
-  } catch (error) {
-    console.error('❌ Debug registration error:', error.message);
-    console.error('❌ Stack:', error.stack);
-    
-    return reply.status(500).send({
-      error: 'Debug registration failed',
-      message: error.message,
-      stack: error.stack
-    });
-  }
-});
-
-// Add this to server.ts - Direct controller test
-fastify.post('/debug/direct-register', async (request, reply) => {
-  console.log('🔍 Direct controller register test');
-  console.log('Request body:', request.body);
-  
-  try {
-    // Import AuthController
-    const { AuthController } = await import('./features/auth/auth.controller');
-    console.log('✅ AuthController imported');
-    
-    // Create instance
-    const authController = new AuthController();
-    console.log('✅ AuthController instance created');
-    
-    // Call register method directly
-    console.log('🔍 Calling register method directly...');
-    const result = await authController.register(request as any, reply as any);
-    
-    console.log('✅ Register method completed');
-    return result;
-    
-  } catch (error) {
-    console.error('❌ Direct controller error:', error.message);
-    console.error('❌ Error name:', error.name);
-    console.error('❌ Stack:', error.stack);
-    
-    return reply.status(500).send({
-      error: 'Direct controller test failed',
-      message: error.message,
-      name: error.name,
-      stack: error.stack
-    });
-  }
-});
-
-fastify.get('/test', async (request, reply) => {
-  console.log('🧪 Test endpoint called');
-  return { message: 'Test working', timestamp: new Date() };
-});
-
-
-// Register plugins
+/**
+ * Register Fastify plugins with security and performance configurations
+ */
 async function registerPlugins() {
-  // CORS support
+  // CORS support for frontend integration
   await fastify.register(require('@fastify/cors'), {
     origin: process.env.NODE_ENV === 'development' 
       ? ['http://localhost:3000', 'http://127.0.0.1:3000']
@@ -247,7 +120,7 @@ async function registerPlugins() {
     }
   });
 
-  // JWT support
+  // JWT support for authentication
   await fastify.register(require('@fastify/jwt'), {
     secret: process.env.JWT_SECRET || 'fallback-jwt-secret',
     cookie: {
@@ -261,7 +134,7 @@ async function registerPlugins() {
     contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false
   });
 
-  // Rate limiting
+  // Rate limiting for API protection
   await fastify.register(require('@fastify/rate-limit'), {
     global: true,
     max: parseInt(process.env.RATE_LIMIT_MAX || '100'),
@@ -269,9 +142,11 @@ async function registerPlugins() {
   });
 }
 
-// Routes
+/**
+ * Register API routes and endpoints
+ */
 async function registerRoutes() {
-  // Health check endpoint
+  // Health check endpoint for monitoring
   fastify.get('/health', async (request, reply) => {
     try {
       // Test database connection
@@ -296,7 +171,7 @@ async function registerRoutes() {
   // Authentication routes
   await fastify.register(authRoutes, { prefix: '/auth' });
 
-  // API info endpoint
+  // API information endpoint
   fastify.get('/', async (request, reply) => {
     return reply.send({
       name: 'Cosmic Platform API',
@@ -308,7 +183,7 @@ async function registerRoutes() {
     });
   });
 
-  // 404 handler
+  // 404 handler for undefined routes
   fastify.setNotFoundHandler((request, reply) => {
     return reply.status(404).send({
       error: 'Not Found',
@@ -318,13 +193,17 @@ async function registerRoutes() {
         'GET /health',
         'POST /auth/register',
         'POST /auth/login',
-        'GET /auth/me'
+        'GET /auth/me',
+        'POST /auth/refresh',
+        'POST /auth/logout'
       ]
     });
   });
 }
 
-// Graceful shutdown
+/**
+ * Graceful shutdown handler for clean server termination
+ */
 async function gracefulShutdown() {
   try {
     fastify.log.info('Starting graceful shutdown...');
@@ -344,7 +223,7 @@ async function gracefulShutdown() {
   }
 }
 
-// Process handlers
+// Process handlers for graceful shutdown
 process.on('SIGTERM', gracefulShutdown);
 process.on('SIGINT', gracefulShutdown);
 
@@ -354,7 +233,9 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 });
 
-// Start server
+/**
+ * Start the Cosmic Platform API server
+ */
 async function start() {
   try {
     // Register plugins and routes

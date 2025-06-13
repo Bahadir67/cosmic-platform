@@ -18,10 +18,14 @@ const prisma = new PrismaClient();
  * Verifies JWT token and extracts user ID
  */
 export async function authMiddleware(request: FastifyRequest, reply: FastifyReply) {
+  console.log('🔍 AUTH MIDDLEWARE CALLED');
+  console.log('Authorization header:', request.headers.authorization);
+  
   try {
     const authHeader = request.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('❌ No valid authorization header');
       return reply.status(401).send({
         error: 'Authentication required',
         message: 'Please provide a valid access token.'
@@ -29,18 +33,24 @@ export async function authMiddleware(request: FastifyRequest, reply: FastifyRepl
     }
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    console.log('🔍 Extracted token:', token.substring(0, 50) + '...');
 
+    console.log('🔍 Verifying access token...');
     // Verify access token
     const payload = await jwtUtil.verifyAccessToken(token);
     const userId = payload.userId;
+    console.log('✅ Token verified, userId:', userId);
 
+    console.log('🔍 Checking if user exists...');
     // Check if user still exists
     const user = await prisma.starSystem.findUnique({
       where: { id: userId },
-      select: { id: true, emailVerified: true }
+      select: { id: true, email_verified: true }
     });
+    console.log('✅ User lookup complete:', user ? 'User found' : 'User not found');
 
     if (!user) {
+      console.log('❌ User not found in database');
       return reply.status(401).send({
         error: 'User not found',
         message: 'The user associated with this token no longer exists.'
@@ -49,11 +59,15 @@ export async function authMiddleware(request: FastifyRequest, reply: FastifyRepl
 
     // Add userId to request for use in route handlers
     request.userId = userId;
+    console.log('✅ Auth middleware complete, userId set:', userId);
 
   } catch (error) {
+    console.error('❌ Auth middleware error:', error.message);
+    console.error('❌ Stack:', error.stack);
     return reply.status(401).send({
       error: 'Invalid token',
-      message: 'The provided access token is invalid or expired.'
+      message: 'The provided access token is invalid or expired.',
+      debug: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 }
