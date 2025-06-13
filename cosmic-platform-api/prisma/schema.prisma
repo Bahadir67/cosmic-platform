@@ -1,3 +1,5 @@
+// prisma/schema.prisma - FIXED with Complete Relations
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,97 +9,235 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// 🌟 STAR SYSTEMS (Users) - Updated with Auth Fields
 model StarSystem {
-  id          String   @id @default(cuid())
-  username    String   @unique
-  email       String   @unique
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                    String    @id @default(cuid())
+  username              String    @unique
+  email                 String    @unique
+  password_hash         String
+  display_name          String?
+  bio                   String?
+  avatar_url            String?
   
-  // User profile data
-  reputation  Int      @default(0)
-  brightness  Int      @default(0)
+  // 🔐 AUTHENTICATION FIELDS (NEW)
+  email_verified        Boolean   @default(false)
+  email_verify_token    String?   @unique
+  password_reset_token  String?   @unique
+  password_reset_expires DateTime?
+  last_login_at         DateTime?
+  failed_login_attempts Int       @default(0)
+  locked_until          DateTime?
+  
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
   
   // Relations
-  planets     Planet[]
-  createdBridges Bridge[] @relation("BridgeCreator")
+  planets               Planet[]
+  content               Content[]
+  comments              Comment[]
+  reactions             Reaction[]
+  galaxy_memberships    GalaxyMember[]
+  sessions              Session[]
+  aether_analyses       AetherAnalysis[]
+  
+  // 🔧 FIXED: Missing relation fields
+  created_bridges       Bridge[]        @relation("BridgeCreator")
+  created_galaxies      Galaxy[]        @relation("GalaxyCreator")
+  created_projects      GalaxyProject[] @relation("ProjectCreator")
   
   @@map("star_systems")
 }
 
+// 🪐 PLANETS (Content Categories)
 model Planet {
-  id           String      @id @default(cuid())
-  starSystemId String      @map("star_system_id")
-  planetType   PlanetType
-  config       Json        @default("{}")
-  createdAt    DateTime    @default(now())
+  id              String    @id @default(cuid())
+  star_system_id  String
+  planet_type     String    // mercury, venus, earth, mars, etc.
+  name            String
+  description     String?
+  color_scheme    String?   // hex color for UI
+  is_active       Boolean   @default(true)
+  settings        Json?     // planet-specific settings
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
   
   // Relations
-  starSystem   StarSystem  @relation(fields: [starSystemId], references: [id], onDelete: Cascade)
-  content      Content[]
+  star_system     StarSystem @relation(fields: [star_system_id], references: [id])
+  content         Content[]
   
   @@map("planets")
 }
 
+// 📝 CONTENT (Layers & Satellites)
 model Content {
-  id           String      @id @default(cuid())
-  planetId     String      @map("planet_id")
-  type         ContentType
-  title        String
-  body         String?
-  metadata     Json        @default("{}")
-  
-  // AI analysis
-  entropyScore Float       @default(0.0) @map("entropy_score")
-  
-  // Timestamps
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  id              String      @id @default(cuid())
+  star_system_id  String
+  planet_id       String?
+  content_type    String      // layer, satellite, bridge_point
+  title           String
+  body            String?
+  media_urls      String[]    @default([])
+  tags            String[]    @default([])
+  entropy_score   Float?      // calculated by Aether
+  visibility      String      @default("public") // public, galaxy, private
+  status          String      @default("active") // active, archived, deleted
+  metadata        Json?
+  created_at      DateTime    @default(now())
+  updated_at      DateTime    @updatedAt
   
   // Relations
-  planet       Planet      @relation(fields: [planetId], references: [id], onDelete: Cascade)
-  bridgesFrom  Bridge[]    @relation("SourceContent")
-  bridgesTo    Bridge[]    @relation("TargetContent")
+  star_system     StarSystem  @relation(fields: [star_system_id], references: [id])
+  planet          Planet?     @relation(fields: [planet_id], references: [id])
+  comments        Comment[]
+  reactions       Reaction[]
+  bridges_from    Bridge[]    @relation("BridgeFrom")
+  bridges_to      Bridge[]    @relation("BridgeTo")
+  aether_analyses AetherAnalysis[]
   
   @@map("content")
 }
 
+// 🌉 BRIDGES (Connections between content)
 model Bridge {
-  id         String     @id @default(cuid())
-  sourceId   String     @map("source_id")
-  targetId   String     @map("target_id")
-  creatorId  String     @map("creator_id")
-  bridgeType BridgeType @map("bridge_type")
-  reason     String
-  confidence Float      @default(0.0)
-  createdAt  DateTime   @default(now())
+  id              String    @id @default(cuid())
+  from_content_id String
+  to_content_id   String
+  bridge_type     String    // reference, inspiration, contrast, etc.
+  strength        Float     @default(1.0) // 0.0 to 1.0
+  description     String?
+  created_by      String
+  created_at      DateTime  @default(now())
   
   // Relations
-  source     Content    @relation("SourceContent", fields: [sourceId], references: [id], onDelete: Cascade)
-  target     Content    @relation("TargetContent", fields: [targetId], references: [id], onDelete: Cascade)
-  creator    StarSystem @relation("BridgeCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  from_content    Content     @relation("BridgeFrom", fields: [from_content_id], references: [id])
+  to_content      Content     @relation("BridgeTo", fields: [to_content_id], references: [id])
+  creator         StarSystem  @relation("BridgeCreator", fields: [created_by], references: [id])
   
   @@map("bridges")
 }
 
-// Enums
-enum PlanetType {
-  MERCURY
-  VENUS
-  MARS
-  JUPITER
-  EARTH
-  KRONOS
+// 🌌 GALAXIES (Communities)
+model Galaxy {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  description     String?
+  avatar_url      String?
+  is_public       Boolean   @default(true)
+  governance_type String    @default("democratic") // democratic, meritocratic, etc.
+  settings        Json?
+  created_by      String
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  
+  // Relations
+  creator         StarSystem      @relation("GalaxyCreator", fields: [created_by], references: [id])
+  members         GalaxyMember[]
+  projects        GalaxyProject[]
+  
+  @@map("galaxies")
 }
 
-enum ContentType {
-  LAYER
-  SATELLITE
+// 👥 GALAXY MEMBERS
+model GalaxyMember {
+  id          String    @id @default(cuid())
+  galaxy_id   String
+  member_id   String
+  role        String    @default("member") // member, moderator, admin
+  reputation  Int       @default(0)
+  joined_at   DateTime  @default(now())
+  
+  // Relations
+  galaxy      Galaxy     @relation(fields: [galaxy_id], references: [id])
+  member      StarSystem @relation(fields: [member_id], references: [id])
+  
+  @@unique([galaxy_id, member_id])
+  @@map("galaxy_members")
 }
 
-enum BridgeType {
-  REFERENCE
-  INSPIRATION
-  UPDATE
-  DEBATE
+// 🚀 GALAXY PROJECTS
+model GalaxyProject {
+  id              String    @id @default(cuid())
+  galaxy_id       String
+  name            String
+  description     String?
+  status          String    @default("active") // active, completed, archived
+  created_by      String
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  
+  // Relations
+  galaxy          Galaxy     @relation(fields: [galaxy_id], references: [id])
+  creator         StarSystem @relation("ProjectCreator", fields: [created_by], references: [id])
+  
+  @@map("galaxy_projects")
+}
+
+// 💬 COMMENTS
+model Comment {
+  id              String    @id @default(cuid())
+  content_id      String
+  author_id       String
+  body            String
+  parent_id       String?   // for reply threads
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  
+  // Relations
+  content         Content   @relation(fields: [content_id], references: [id])
+  author          StarSystem @relation(fields: [author_id], references: [id])
+  parent          Comment?  @relation("CommentReplies", fields: [parent_id], references: [id])
+  replies         Comment[] @relation("CommentReplies")
+  
+  @@map("comments")
+}
+
+// ❤️ REACTIONS
+model Reaction {
+  id              String    @id @default(cuid())
+  content_id      String
+  user_id         String
+  reaction_type   String    // like, love, mind_blown, etc.
+  created_at      DateTime  @default(now())
+  
+  // Relations
+  content         Content   @relation(fields: [content_id], references: [id])
+  user            StarSystem @relation(fields: [user_id], references: [id])
+  
+  @@unique([content_id, user_id, reaction_type])
+  @@map("reactions")
+}
+
+// 🔐 SESSIONS (JWT Token Management)
+model Session {
+  id              String    @id @default(cuid())
+  user_id         String
+  token_id        String    @unique
+  refresh_token   String    @unique
+  expires_at      DateTime
+  user_agent      String?
+  ip_address      String?
+  created_at      DateTime  @default(now())
+  
+  // Relations
+  user            StarSystem @relation(fields: [user_id], references: [id])
+  
+  @@map("sessions")
+}
+
+// 🤖 AETHER ANALYSIS (AI-powered insights)
+model AetherAnalysis {
+  id              String    @id @default(cuid())
+  content_id      String
+  analyzed_by     String
+  analysis_type   String    // quality, entropy, bridge_suggestion, etc.
+  score           Float?
+  insights        Json
+  confidence      Float     @default(0.0) // 0.0 to 1.0
+  created_at      DateTime  @default(now())
+  
+  // Relations
+  content         Content   @relation(fields: [content_id], references: [id])
+  analyzer        StarSystem @relation(fields: [analyzed_by], references: [id])
+  
+  @@map("aether_analysis")
 }
