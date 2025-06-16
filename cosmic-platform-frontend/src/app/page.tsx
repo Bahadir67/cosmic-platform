@@ -1,62 +1,70 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth, useAuthActions } from '@/store/authStore';
 
-export default function LoginPage() {
+export default function Home() {
   const router = useRouter();
-  const { isAuthenticated, isLoading, error } = useAuth();
-  const { login, register, clearError, initialize } = useAuthActions();
-
+  
   // Local state
   const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
-    name: '',
+    username: '',
     email: '',
     password: '',
     confirmPassword: '',
   });
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Initialize auth store on mount
-  useEffect(() => {
-    //initialize();
-  }, [initialize]);
-
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.push('/dashboard');
-    }
-  }, [isAuthenticated, router]);
-
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    clearError();
+    setIsLoading(true);
+    setError('');
 
-    if (mode === 'register') {
-      // Validation for registration
-      if (formData.password !== formData.confirmPassword) {
-        return; // Could add local validation error
-      }
-      if (formData.name.trim().length < 2) {
-        return; // Could add local validation error
-      }
+    try {
+      if (mode === 'register') {
+        // Validation
+        if (formData.password !== formData.confirmPassword) {
+          setError('Şifreler eşleşmiyor');
+          return;
+        }
+        if (formData.username.trim().length < 2) {
+          setError('Kullanıcı adı en az 2 karakter olmalı');
+          return;
+        }
+        if (formData.password.length < 6) {
+          setError('Şifre en az 6 karakter olmalı');
+          return;
+        }
 
-      const success = await register(formData.name, formData.email, formData.password);
-      if (success) {
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
         setShowSuccess(true);
         setMode('login');
-        setFormData(prev => ({ ...prev, name: '', password: '', confirmPassword: '' }));
+        setFormData(prev => ({ 
+          ...prev, 
+          username: '', 
+          password: '', 
+          confirmPassword: '' 
+        }));
+      } else {
+        // Login simulation
+        if (formData.email && formData.password) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          router.push('/dashboard');
+        } else {
+          setError('Email ve şifre gerekli');
+        }
       }
-    } else {
-      // Login
-      const success = await login(formData.email, formData.password);
-      if (success) {
-        router.push('/dashboard');
-      }
+    } catch (err: any) {
+      setError(err.message || 'Bir hata oluştu');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -64,203 +72,282 @@ export default function LoginPage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    if (error) clearError();
+    if (error) setError('');
   };
 
   // Handle mode switch
   const switchMode = () => {
     setMode(mode === 'login' ? 'register' : 'login');
-    clearError();
+    setError('');
     setShowSuccess(false);
-    setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+    setFormData({ username: '', email: '', password: '', confirmPassword: '' });
+    setFocusedField(null);
   };
 
   return (
-    <div className="min-h-screen bg-cosmic-void overflow-hidden relative">
-      {/* Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-cosmic-void via-purple-900/20 to-cosmic-void">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_25%,_rgba(233,69,96,0.1)_0%,_transparent_50%)]"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_75%,_rgba(243,156,18,0.1)_0%,_transparent_50%)]"></div>
-      </div>
-
-      {/* Floating Nebula Clouds */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-96 h-96 bg-cosmic-star/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-80 h-80 bg-cosmic-plasma/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-2000"></div>
-      </div>
-
-      {/* Twinkling Stars */}
-      <div className="absolute inset-0 pointer-events-none">
-        {[...Array(25)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-white rounded-full animate-twinkle"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${2 + Math.random() * 2}s`,
-            }}
-          ></div>
-        ))}
-      </div>
-
-      {/* Main Content */}
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          {/* Cosmic Card */}
-          <div className="cosmic-card bg-gray-900/50 backdrop-blur-xl border border-gray-700/50 rounded-2xl p-8 shadow-2xl">
-            {/* Header */}
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-cosmic-star/20 rounded-full mb-4 animate-pulse">
-                <span className="text-2xl">🌌</span>
-              </div>
-              <h1 className="text-3xl font-bold text-white mb-2">
-                {mode === 'login' ? 'Welcome Back' : 'Join the Cosmos'}
+    <main className="relative min-h-screen flex items-center justify-center p-8">
+      {/* Desktop Layout Container */}
+      <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        
+        {/* Left Side - Branding & Info */}
+        <div className="hidden lg:block text-center lg:text-left space-y-8">
+          {/* Main Brand */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-center lg:justify-start space-x-4">
+              <div className="w-4 h-4 bg-cosmic-star rounded-full animate-pulse" />
+              <h1 className="text-6xl font-bold bg-gradient-to-r from-cosmic-star via-cosmic-plasma to-cosmic-star bg-clip-text text-transparent">
+                COSMIC
               </h1>
-              <p className="text-gray-400">
-                {mode === 'login' 
-                  ? 'Enter your cosmic coordinates' 
-                  : 'Create your stellar identity'
-                }
+              <div className="w-4 h-4 bg-cosmic-plasma rounded-full animate-pulse animation-delay-1000" />
+            </div>
+            
+            <div className="space-y-4">
+              <h2 className="text-2xl text-white font-semibold">
+                Every mind is a universe
+              </h2>
+              <p className="text-white/70 text-lg leading-relaxed max-w-md">
+                Connect your thoughts across the digital cosmos. Create planets of knowledge, 
+                build bridges between ideas, and explore galaxies of community.
               </p>
             </div>
+          </div>
 
-            {/* Success Message */}
-            {showSuccess && (
-              <div className="mb-6 p-4 bg-green-500/20 border border-green-500/50 rounded-lg text-green-300 text-sm">
-                🚀 Registration successful! Please check your email to verify your account, then login below.
+          {/* Feature Cards */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-4 p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
+              <div className="w-8 h-8 bg-cosmic-star/20 rounded-lg flex items-center justify-center">
+                <span className="text-cosmic-star">🌍</span>
               </div>
-            )}
-
-            {/* Error Message */}
-            {error && (
-              <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-red-300 text-sm">
-                ⚠️ {error}
+              <div className="text-left">
+                <div className="text-white font-medium">Create Planets</div>
+                <div className="text-white/60 text-sm">Transform thoughts into digital worlds</div>
               </div>
-            )}
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Name field (register only) */}
-              {mode === 'register' && (
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">
-                    Cosmic Name
-                  </label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    required
-                    disabled={isLoading}
-                    className="cosmic-input w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cosmic-star focus:border-transparent transition-all duration-200 disabled:opacity-50"
-                    placeholder="Enter your name"
-                  />
-                </div>
-              )}
-
-              {/* Email field */}
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                  disabled={isLoading}
-                  className="cosmic-input w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cosmic-star focus:border-transparent transition-all duration-200 disabled:opacity-50"
-                  placeholder="Enter your email"
-                />
-              </div>
-
-              {/* Password field */}
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-                  Password {mode === 'register' && <span className="text-xs text-gray-400">(min 6 chars, 1 special char: !@#$%^&*)</span>}
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  required
-                  disabled={isLoading}
-                  className="cosmic-input w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cosmic-star focus:border-transparent transition-all duration-200 disabled:opacity-50"
-                  placeholder={mode === 'register' ? "Enter password (e.g. mypass123!)" : "Enter your password"}
-                />
-              </div>
-
-              {/* Confirm Password field (register only) */}
-              {mode === 'register' && (
-                <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
-                    Confirm Password
-                  </label>
-                  <input
-                    type="password"
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                    required
-                    disabled={isLoading}
-                    className="cosmic-input w-full px-4 py-3 bg-gray-800/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cosmic-star focus:border-transparent transition-all duration-200 disabled:opacity-50"
-                    placeholder="Confirm your password"
-                  />
-                </div>
-              )}
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="cosmic-button w-full py-3 px-6 bg-gradient-to-r from-cosmic-star to-cosmic-plasma text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-cosmic-star/25 transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-              >
-                {isLoading ? (
-                  <div className="flex items-center justify-center space-x-2">
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    <span>{mode === 'login' ? 'Entering...' : 'Creating...'}</span>
-                  </div>
-                ) : (
-                  <>
-                    {mode === 'login' ? 'Enter the Cosmos 🚀' : 'Create Star System ⭐'}
-                  </>
-                )}
-              </button>
-            </form>
-
-            {/* Mode Switch */}
-            <div className="mt-6 text-center">
-              <button
-                type="button"
-                onClick={switchMode}
-                disabled={isLoading}
-                className="text-cosmic-plasma hover:text-cosmic-star transition-colors duration-200 text-sm disabled:opacity-50"
-              >
-                {mode === 'login' 
-                  ? "Don't have an account? Create one" 
-                  : 'Already have an account? Sign in'
-                }
-              </button>
             </div>
-
-            {/* Status Indicator */}
-            <div className="mt-6 flex items-center justify-center space-x-2 text-xs text-gray-500">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span>Cosmic Network Online</span>
+            
+            <div className="flex items-center space-x-4 p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
+              <div className="w-8 h-8 bg-cosmic-plasma/20 rounded-lg flex items-center justify-center">
+                <span className="text-cosmic-plasma">🌉</span>
+              </div>
+              <div className="text-left">
+                <div className="text-white font-medium">Build Bridges</div>
+                <div className="text-white/60 text-sm">Connect ideas across the universe</div>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-4 p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
+              <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                <span className="text-purple-400">🌌</span>
+              </div>
+              <div className="text-left">
+                <div className="text-white font-medium">Join Galaxies</div>
+                <div className="text-white/60 text-sm">Discover communities of explorers</div>
+              </div>
             </div>
           </div>
         </div>
+
+        {/* Right Side - Login Form */}
+        <div className="w-full max-w-md mx-auto space-y-6">
+          
+          {/* Mobile Header */}
+          <div className="lg:hidden text-center mb-8">
+            <div className="flex items-center justify-center space-x-3 mb-4">
+              <div className="w-3 h-3 bg-cosmic-star rounded-full animate-pulse" />
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-cosmic-star via-cosmic-plasma to-cosmic-star bg-clip-text text-transparent">
+                COSMIC
+              </h1>
+              <div className="w-3 h-3 bg-cosmic-plasma rounded-full animate-pulse animation-delay-1000" />
+            </div>
+            <p className="text-white/70">Every mind is a universe</p>
+          </div>
+
+          {/* Form Header */}
+          <div className="text-center space-y-2">
+            <h2 className="text-2xl font-bold text-white">
+              {mode === 'login' ? 'Welcome Back' : 'Join the Cosmos'}
+            </h2>
+            <p className="text-white/60">
+              {mode === 'login' ? 'Continue your cosmic journey' : 'Begin your digital universe exploration'}
+            </p>
+          </div>
+
+          {/* Success Message */}
+          {showSuccess && (
+            <div className="p-4 bg-emerald-500/20 border border-emerald-500/30 rounded-xl text-emerald-200 text-sm backdrop-blur-sm">
+              <div className="flex items-center space-x-2">
+                <span>🚀</span>
+                <span>Registration successful! Welcome to the cosmos.</span>
+              </div>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {error && (
+            <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-xl text-red-200 text-sm backdrop-blur-sm">
+              <div className="flex items-center space-x-2">
+                <span>⚠️</span>
+                <span>{error}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Mode Toggle */}
+          <div className="flex bg-white/5 backdrop-blur-sm rounded-xl p-1 border border-white/10">
+            <button
+              onClick={() => setMode('login')}
+              className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-300 ${
+                mode === 'login'
+                  ? 'bg-cosmic-star text-white shadow-lg'
+                  : 'text-white/70 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              onClick={() => setMode('register')}
+              className={`flex-1 py-3 px-4 rounded-lg text-sm font-medium transition-all duration-300 ${
+                mode === 'register'
+                  ? 'bg-cosmic-star text-white shadow-lg'
+                  : 'text-white/70 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              Register
+            </button>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Username field (register only) */}
+            {mode === 'register' && (
+              <div className="space-y-2">
+                <label className="text-white/80 text-sm font-medium block">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleInputChange}
+                  onFocus={() => setFocusedField('username')}
+                  onBlur={() => setFocusedField(null)}
+                  placeholder="cosmic_explorer"
+                  required
+                  disabled={isLoading}
+                  className={`w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/40 transition-all duration-300 focus:outline-none focus:border-cosmic-star focus:bg-white/15 focus:ring-2 focus:ring-cosmic-star/20 ${
+                    isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                />
+              </div>
+            )}
+            
+            {/* Email field */}
+            <div className="space-y-2">
+              <label className="text-white/80 text-sm font-medium block">
+                {mode === 'login' ? 'Email or Username' : 'Email Address'}
+              </label>
+              <input
+                type={mode === 'login' ? 'text' : 'email'}
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                onFocus={() => setFocusedField('email')}
+                onBlur={() => setFocusedField(null)}
+                placeholder="cosmic@universe.com"
+                required
+                disabled={isLoading}
+                className={`w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/40 transition-all duration-300 focus:outline-none focus:border-cosmic-star focus:bg-white/15 focus:ring-2 focus:ring-cosmic-star/20 ${
+                  isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              />
+            </div>
+            
+            {/* Password field */}
+            <div className="space-y-2">
+              <label className="text-white/80 text-sm font-medium block">
+                Password
+              </label>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                onFocus={() => setFocusedField('password')}
+                onBlur={() => setFocusedField(null)}
+                placeholder="••••••••"
+                required
+                disabled={isLoading}
+                className={`w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/40 transition-all duration-300 focus:outline-none focus:border-cosmic-star focus:bg-white/15 focus:ring-2 focus:ring-cosmic-star/20 ${
+                  isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              />
+            </div>
+
+            {/* Confirm Password field (register only) */}
+            {mode === 'register' && (
+              <div className="space-y-2">
+                <label className="text-white/80 text-sm font-medium block">
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  onFocus={() => setFocusedField('confirmPassword')}
+                  onBlur={() => setFocusedField(null)}
+                  placeholder="••••••••"
+                  required
+                  disabled={isLoading}
+                  className={`w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/40 transition-all duration-300 focus:outline-none focus:border-cosmic-star focus:bg-white/15 focus:ring-2 focus:ring-cosmic-star/20 ${
+                    isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                />
+              </div>
+            )}
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-3 px-6 bg-gradient-to-r from-cosmic-star to-cosmic-plasma text-white font-semibold rounded-xl transition-all duration-300 hover:shadow-lg hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-cosmic-star/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+            >
+              {isLoading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <span>
+                    {mode === 'login' ? 'Signing in...' : 'Creating account...'}
+                  </span>
+                </div>
+              ) : (
+                <span>
+                  {mode === 'login' ? 'Enter the Cosmos' : 'Begin Your Journey'}
+                </span>
+              )}
+            </button>
+          </form>
+
+          {/* Footer */}
+          <div className="text-center">
+            <button
+              onClick={switchMode}
+              disabled={isLoading}
+              className="text-white/60 hover:text-cosmic-star transition-colors text-sm disabled:opacity-50"
+            >
+              {mode === 'login' 
+                ? "Don't have an account? Register here" 
+                : 'Already have an account? Sign in'
+              }
+            </button>
+          </div>
+
+          {/* Version */}
+          <div className="text-center">
+            <p className="text-white/40 text-xs">
+              COSMIC Platform v1.0 • Digital Universe
+            </p>
+          </div>
+        </div>
       </div>
-    </div>
+    </main>
   );
 }
